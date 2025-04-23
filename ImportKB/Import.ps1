@@ -128,3 +128,5 @@ foreach ($uid in $updateList) {
         Write-Error "Failed. $_"
     }
 }
+
+# exemple 48d33c41-338c-473a-af00-c31a57978512
