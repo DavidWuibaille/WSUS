@@ -41,15 +41,24 @@ if ($null -eq $drive -or ($drive.Free/1GB) -lt $minFreeGB) {
     Write-Log ("Sufficient free space on C:. Free: {0:N2}GB" -f ($drive.Free/1GB))
 }
 
-# MSU file name (must be present in script folder)
-$MSUFile = "update.msu" # Change as needed
+# MSU download info
+$MSUFile = "windows10.0-kb5060533-x64.msu"
+$MSUUrl = "https://catalog.s.download.windowsupdate.com/d/msdownload/update/software/secu/2025/06/windows10.0-kb5060533-x64_dbb8353c12c9760b0c56a8834719b68a01a20abb.msu"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $MSUPath = Join-Path $ScriptDir $MSUFile
 
-# Check if MSU file exists
+# Download the MSU file if not present
 if (-not (Test-Path $MSUPath)) {
-    Write-Log "MSU file not found: $MSUPath"
-    exit 104
+    try {
+        Write-Log "Downloading MSU from $MSUUrl"
+        Invoke-WebRequest -Uri $MSUUrl -OutFile $MSUPath
+        Write-Log "Download completed: $MSUPath"
+    } catch {
+        Write-Log "Failed to download MSU: $_"
+        exit 104
+    }
+} else {
+    Write-Log "MSU file already exists: $MSUPath"
 }
 
 Write-Log "Starting installation of $MSUPath"
