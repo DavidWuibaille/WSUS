@@ -6,6 +6,7 @@ function Write-Log {
     param([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     Add-Content -Path $LogPath -Value "$timestamp $Message"
+    Write-Host $Message
 }
 
 # Check 1: Reboot pending
@@ -15,20 +16,6 @@ if (Test-Path $RebootRegKey) {
     exit 101
 } else {
     Write-Log "No pending reboot."
-}
-
-# Check 2: Windows Update service running
-try {
-    $wua = Get-Service -Name 'wuauserv'
-    if ($wua.Status -ne 'Running') {
-        Write-Log "wuauserv service is not running."
-        exit 102
-    } else {
-        Write-Log "wuauserv service is running."
-    }
-} catch {
-    Write-Log "wuauserv service not found: $_"
-    exit 102
 }
 
 # Check 3: Free space on C:
@@ -42,23 +29,35 @@ if ($null -eq $drive -or ($drive.Free/1GB) -lt $minFreeGB) {
 }
 
 # MSU download info
-$MSUFile = "windows10.0-kb5060533-x64.msu"
-$MSUUrl = "https://catalog.s.download.windowsupdate.com/d/msdownload/update/software/secu/2025/06/windows10.0-kb5060533-x64_dbb8353c12c9760b0c56a8834719b68a01a20abb.msu"
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$MSUFile = "windows10.0-kb5060531-x64.msu"
+$MSUUrl = "https://catalog.s.download.windowsupdate.com/c/msdownload/update/software/secu/2025/06/windows10.0-kb5060531-x64_83789c3b9350e10e207370622c4ef54dd685ee02.msu"
+$ScriptDir = "c:\windows\temp"
 $MSUPath = Join-Path $ScriptDir $MSUFile
 
-# Download the MSU file if not present
-if (-not (Test-Path $MSUPath)) {
-    try {
-        Write-Log "Downloading MSU from $MSUUrl"
-        Invoke-WebRequest -Uri $MSUUrl -OutFile $MSUPath
-        Write-Log "Download completed: $MSUPath"
-    } catch {
-        Write-Log "Failed to download MSU: $_"
+# Always delete the MSU file before download
+if (Test-Path $MSUPath) {
+    Write-Log "Deleting existing MSU file: $MSUPath"
+    Remove-Item -Path $MSUPath -Force -ErrorAction SilentlyContinue
+}
+
+try {
+    Write-Log "Downloading MSU from $MSUUrl using System.Net.WebClient"
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $wc = New-Object System.Net.WebClient
+    $wc.DownloadFile($MSUUrl, $MSUPath)
+    $sw.Stop()
+    $downloadTime = "{0:N2}" -f $sw.Elapsed.TotalSeconds
+
+    if (-not (Test-Path $MSUPath)) {
+        Write-Log "Failed to download MSU (file not found after download)"
         exit 104
+    } else {
+        Write-Log "Download completed: $MSUPath"
+        Write-Log "Download time: $downloadTime seconds"
     }
-} else {
-    Write-Log "MSU file already exists: $MSUPath"
+} catch {
+    Write-Log "Failed to download MSU with WebClient: $_"
+    exit 104
 }
 
 Write-Log "Starting installation of $MSUPath"
