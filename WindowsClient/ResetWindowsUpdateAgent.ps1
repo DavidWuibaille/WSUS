@@ -1,12 +1,11 @@
-# Script to stop wuauserv, clean SoftwareDistribution, and always restart it
-
+$global:LogPath = "C:\Windows\Temp\Wuauserv_Cleanup.log"
 $ServiceName = "wuauserv"
-$LogPath = "C:\Windows\Temp\Wuauserv_Cleanup.log"
 
 function Write-Log {
     param([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Add-Content -Path $LogPath -Value "$timestamp $Message"
+    Add-Content -Path $global:LogPath -Value "$timestamp $Message"
+	write-host $Message
 }
 
 function Clean-WUClientFolders {
@@ -20,7 +19,7 @@ function Clean-WUClientFolders {
             Remove-Item $WUDownload -Recurse -Force
             Write-Log "Deleted $WUDownload"
         } catch {
-            Write-Log "Failed to delete $WUDownload: $_"
+            Write-Log ("Failed to delete $WUDownload")
         }
     }
     if (Test-Path $WUDataStore) {
@@ -28,30 +27,25 @@ function Clean-WUClientFolders {
             Remove-Item $WUDataStore -Recurse -Force
             Write-Log "Deleted $WUDataStore"
         } catch {
-            Write-Log "Failed to delete $WUDataStore: $_"
+            Write-Log ("Failed to delete $WUDataStore")
         }
     }
 }
 
-# Stop the service
 try {
     Write-Log "Stopping $ServiceName"
     Stop-Service -Name $ServiceName -Force -ErrorAction Stop
     Start-Sleep -Seconds 3
 } catch {
-    Write-Log "Failed to stop $ServiceName: $_"
+    Write-Log ("Failed to stop $ServiceName")
 }
 
-# Clean folders
 Clean-WUClientFolders
 
-# Start the service
 try {
     Write-Log "Starting $ServiceName"
     Start-Service -Name $ServiceName -ErrorAction Stop
     Write-Log "$ServiceName started"
 } catch {
-    Write-Log "Failed to start $ServiceName: $_"
+    Write-Log ("Failed to start $ServiceName")
 }
-
-Write-Log "Script completed."
