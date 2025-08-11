@@ -1,44 +1,40 @@
-
 $SyncApprovals = @(
-    # Synchronisation des groupes TESTERS vers PILOT
+    # Sync TESTERS -> PILOT
     @{
-        "Source"  = "Pilot"  # Groupe source : TESTERS
-        "Target"  = "Global1"    # Groupe cible : PILOT
-        "MinDays" = 5          # Nombre de jours minimum avant la synchronisation
+        "Source"  = "Pilot"      # Source group: TESTERS
+        "Target"  = "Global1"    # Target group: PILOT
+        "MinDays" = 5            # Minimum number of days before synchronization
     },
     
-    # Synchronisation des groupes PILOT vers PROD
+    # Sync PILOT -> PROD
     @{
-        "Source"  = "Global1"    # Groupe source : PILOT
-        "Target"  = "Global2"     # Groupe cible : PROD
-        "MinDays" = 5          # Nombre de jours minimum avant la synchronisation
+        "Source"  = "Global1"    # Source group: PILOT
+        "Target"  = "Global2"    # Target group: PROD
+        "MinDays" = 5            # Minimum number of days before synchronization
     }
 )
 
 $logFolder = "C:\logs"
 $maxLogs = 60
 
-
-# Check if the folder exists, create it if it doesn't
+# Ensure the log folder exists (create if missing)
 If (-not (Test-Path $logFolder)) {
-    # Create the folder if it does not exist
     New-Item -Path $logFolder -ItemType Directory
     Write-Host "The directory $logFolder has been created."
 } else {
     Write-Host "The directory $logFolder already exists."
 }
 
-# Limit the number of log files
+# Limit the number of log files (keep the most recent $maxLogs)
 $logFiles = Get-ChildItem -Path $logFolder -Filter "WSUS-ManageApprovals*.log" | Sort-Object LastWriteTime -Descending
 if ($logFiles.Count -gt $maxLogs) {
-    # Remove old log files if the count exceeds the max limit
     $logFiles | Select-Object -Skip $maxLogs | Remove-Item -Force
 }
 
-# ----------------- Log Files ----------------------
+# Build current log file path
 $logFile = Join-Path $logFolder ("WSUS-ManageApprovals" + (Get-Date -format "yyyyMMdd-HHmmss") + ".log")
 
-# ----------------- Connect to WSUS server ----------------
+# Connect to the WSUS server
 Try {
     [reflection.assembly]::LoadWithPartialName("Microsoft.UpdateServices.Administration") | Out-Null
     $wsusServer = [Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer()
@@ -51,7 +47,7 @@ Try {
     Exit
 }
 
-# ----------------- Start synchronization ----------------
+# Start a WSUS synchronization (non-blocking)
 Try {
     $subscription.StartSynchronization()
     Write-Output "Synchronization successfully started." | Add-Content -Path $logFile
@@ -60,7 +56,7 @@ Try {
     Exit
 }
 
-# ----------------- Manage updates ----------------------
+# Filter working updates (exclude declined) and accept EULAs if needed
 $workingUpdates = $updates | Where-Object { -not $_.IsDeclined }
 Foreach ($update in $workingUpdates) {   
     # Accept license agreement if required
@@ -70,18 +66,18 @@ Foreach ($update in $workingUpdates) {
     }
 }
 
-# ----------------- Approve updates ------------------
+# Approve updates to target groups after MinDays since source approval GoLiveTime
 Write-Output "********** Approve KB **********" | Add-Content -Path $logFile
 Foreach ($update in $workingUpdates) {
     $approvals = $update.GetUpdateApprovals()
     Foreach ($syncApproval in $SyncApprovals) {
         $sourceGroup = $targetGroups | Where-Object { $_.Name -eq $syncApproval.Source }
         
-        # Ensure source group exists and action is set to "Install"
+        # Ensure source group exists and action is Install
         If ($sourceGroup) {
             $sourceApproval = $approvals | Where-Object { $_.ComputerTargetGroupId -eq $sourceGroup.ID }
             If ($sourceApproval -and $($sourceApproval.Action) -eq "Install") {
-                # Check if enough days have passed
+                # Check if enough days have passed since GoLiveTime
                 $LastChangeKB = (New-TimeSpan -Start $sourceApproval.GoLiveTime -End (Get-Date)).Days
                 If ($LastChangeKB -ge $syncApproval.MinDays) {
                     $targetGroup = $targetGroups | Where-Object { $_.Name -eq $syncApproval.Target }
@@ -100,7 +96,7 @@ Foreach ($update in $workingUpdates) {
     }
 }
 
-# ----------------- Disable superseded updates ------------------
+# Decline superseded updates if a superseding one is installed for the expected target groups
 Write-Output "********** Disable Superseded Updates **********" | Add-Content -Path $logFile
 $workingUpdates = $workingUpdates | Where-Object { $_.IsSuperseded }
 Foreach ($update in $workingUpdates) {
@@ -111,12 +107,12 @@ Foreach ($update in $workingUpdates) {
         Write-Output "----- Replaced By: $($Supersede.Title)" | Add-Content -Path $logFile
         $approvals = $Supersede.GetUpdateApprovals()
         
-        # Check if update is installed on target groups and decline it if needed
+        # If a superseding update is approved for Install in Global2, decline the superseded one
         Foreach ($approval in $approvals) {
             Foreach ($targetGroup in $targetGroups) {
                 If (($targetGroup.Id -eq $approval.ComputerTargetGroupId) -and ($($approval.Action) -eq "Install")) {
                     Write-Output "---------- $($targetGroup.Name)" | Add-Content -Path $logFile
-                    if ($($targetGroup.Name) -like "*GLOBAL*ODD*") {
+                    if ($($targetGroup.Name) -eq "Global2") {   # fixed: target group is Global2
                         Write-Output "---------- Declining: $($update.Title)" | Add-Content -Path $logFile
                         $update.Decline()
                     }
@@ -125,15 +121,3 @@ Foreach ($update in $workingUpdates) {
         }
     }
 }
-
-# ----------------- Cleanup WSUS server ----------------
-Write-Output "********** Cleanup WSUS **********" | Add-Content -Path $logFile
-$cleanupInterface = $wsusServer.GetCleanupManager()
-$cleanupScope = New-Object 'Microsoft.UpdateServices.Administration.CleanupScope'
-$cleanupScope.DeclineSupersededUpdates = $True
-$cleanupScope.DeclineExpiredUpdates = $True
-$cleanupScope.CleanupObsoleteComputers = $True
-$cleanupScope.CleanupObsoleteUpdates = $True
-$cleanupScope.CompressUpdates = $True
-$cleanupScope.CleanupUnneededContentFiles = $True
-$cleanupInterface.PerformCleanup($cleanupScope)
