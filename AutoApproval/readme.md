@@ -25,3 +25,7 @@ Edit the top of the script:
 ```powershell
 # Run the script (no parameters)
 .\Wsus-ManageApprovals.ps1
+```
+
+## Full documentation
+https://blog.wuibaille.fr/2024/10/automate-assign-patch-to-group/
