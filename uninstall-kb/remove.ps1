@@ -3,7 +3,7 @@ function Remove-Package {
         [string]$KB
     )
  
-    # Recherche du ou des packages
+    # Find matching package(s)
     $packages = Get-WindowsPackage -Online | Where-Object { $_.PackageName -match $KB }
  
     if($packages.Count -eq 0) {
@@ -11,11 +11,11 @@ function Remove-Package {
         return
     }
  
-    # Affichage des packages trouvés
+    # Display found packages
     Write-Host "Packages found matching $KB"
     $packages | ForEach-Object { Write-Host $_.PackageName }
  
-    # Suppression des packages
+    # Uninstall packages
     foreach($package in $packages) {
         try {
             Write-Host "Uninstalling $($package.PackageName)..."
@@ -29,5 +29,5 @@ function Remove-Package {
     Write-Host "Please restart your computer."
 }
  
-# Exemple d'utilisation
+# Example usage
 Remove-Package -KB "KB4589210"
