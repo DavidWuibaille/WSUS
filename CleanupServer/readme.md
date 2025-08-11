@@ -26,4 +26,4 @@ Works with the supported WSUS cmdlets (`UpdateServices` module). A legacy .NET f
 .\Wsus-Cleanup.ps1 -UseSsl -Port 8531 -Verbose
 ```
 
-Blog: https://blog.wuibaille.fr/2024/10/automated-wsus-cleanup/
+Blog: https://blog.wuibaille.fr/2023/07/powershell-script-to-cleanup-wsus-server/
