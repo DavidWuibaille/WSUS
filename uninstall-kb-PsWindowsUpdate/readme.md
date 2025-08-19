@@ -1,4 +1,4 @@
-# Uninstall a Windows Update by KB (PowerShell, PSWindowsUpdate)
+# Uninstall a Windows Update by KB (PSWindowsUpdate)
 
 Minimal helper and examples to remove an installed Windows update by its **KB** number using the **PSWindowsUpdate** module.
 
@@ -32,5 +32,3 @@ If you saved the wrapper as `Remove-KB.ps1`:
   ```
 - Logs: `C:\Windows\Logs\WindowsUpdate\windowsupdate.log` and `C:\Windows\Logs\CBS\CBS.log`.
 
-## Full documentation
-👉 https://blog.wuibaille.fr/2025/08/uninstall-a-kb-with-pswindowsupdate/
