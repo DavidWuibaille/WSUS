@@ -40,5 +40,4 @@ C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionP
 - Optionally delete `*.old` folders after a few days if disk space matters.
 - Check logs (paths above) if issues persist; see also `C:\Windows\WindowsUpdate.log` and `C:\Windows\Logs\CBS\CBS.log`.
 
-## Full article
-https://blog.wuibaille.fr/2025/08/reset-windows-update-components/
+
