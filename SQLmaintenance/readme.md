@@ -36,5 +36,3 @@ schtasks /Create /TN "WSUS DB Maintenance" ^
   /SC MONTHLY /D 1 /ST 02:00 /RU "SYSTEM" /RL HIGHEST /F
 ```
 
-## Full documentation
-https://blog.wuibaille.fr/2025/08/regular-wsus-database-maintenance-keeps-susdb-fast-and-healthy/
