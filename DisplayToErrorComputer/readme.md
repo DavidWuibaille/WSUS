@@ -14,7 +14,7 @@ Generate a CSV of client machines that had Windows Update installation errors ov
 
 ## Install
 
-1. Copy the script here: `DisplayToErrorComputer/Display.ps1` (same folder as this README is fine).
+1. Copy the script here: `DisplayToErrorComputer/Display.ps1`
 2. Unblock if downloaded from the internet:
    ```powershell
    Unblock-File .\Display.ps1
