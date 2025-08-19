@@ -38,5 +38,3 @@ schtasks /Create /TN "WSUS Top Error Computers" ^
   /SC DAILY /ST 02:00 /RU SYSTEM /RL HIGHEST /F
 ```
 
-## Full article
-https://blog.wuibaille.fr/2024/05/display-top-error-computers-with-powershell/
